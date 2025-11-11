@@ -40,6 +40,18 @@ if (!$ag || $ag['medico_id'] != $_SESSION['user_id']) {
                 <dd class="font-semibold text-slate-900"><?= htmlspecialchars($ag['nome_paciente']) ?></dd>
             </div>
             <div>
+                <dt class="text-xs uppercase tracking-[0.14em] text-slate-400">Telefone</dt>
+                <dd class="font-semibold text-slate-900"><?= htmlspecialchars($ag['telefone_paciente'] ?? 'Não informado') ?></dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-[0.14em] text-slate-400">Email</dt>
+                <dd class="font-semibold text-slate-900"><?= htmlspecialchars($ag['email_paciente'] ?? 'Não informado') ?></dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-[0.14em] text-slate-400">Protocolo</dt>
+                <dd class="font-semibold text-slate-900"><?= htmlspecialchars($ag['protocolo'] ?? 'Não informado') ?></dd>
+            </div>
+            <div>
                 <dt class="text-xs uppercase tracking-[0.14em] text-slate-400">Convênio</dt>
                 <dd class="font-semibold text-slate-900"><?= htmlspecialchars($ag['convenio']) ?></dd>
             </div>

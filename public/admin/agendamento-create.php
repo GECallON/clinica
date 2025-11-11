@@ -84,6 +84,18 @@ $version = time();
                                     <input id="nome_paciente" name="nome_paciente" type="text" class="w-full" required>
                                 </div>
                                 <div class="form-field">
+                                    <label for="telefone_paciente">Telefone do paciente</label>
+                                    <input id="telefone_paciente" name="telefone_paciente" type="text" class="w-full telefone-mask" placeholder="(00) 00000-0000">
+                                </div>
+                                <div class="form-field">
+                                    <label for="email_paciente">Email do paciente</label>
+                                    <input id="email_paciente" name="email_paciente" type="email" class="w-full" placeholder="paciente@email.com">
+                                </div>
+                                <div class="form-field">
+                                    <label for="protocolo">Protocolo</label>
+                                    <input id="protocolo" name="protocolo" type="text" class="w-full" placeholder="Cole o protocolo existente aqui">
+                                </div>
+                                <div class="form-field">
                                     <label for="convenio">Convênio *</label>
                                     <input id="convenio" name="convenio" type="text" class="w-full" required>
                                 </div>
@@ -163,5 +175,41 @@ $version = time();
             </main>
         </div>
     </div>
+
+    <script>
+        // Máscara para telefone
+        document.querySelectorAll('.telefone-mask').forEach(input => {
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 11) value = value.slice(0, 11);
+
+                if (value.length > 6) {
+                    value = `(${value.slice(0,2)}) ${value.slice(2,7)}-${value.slice(7)}`;
+                } else if (value.length > 2) {
+                    value = `(${value.slice(0,2)}) ${value.slice(2)}`;
+                } else if (value.length > 0) {
+                    value = `(${value}`;
+                }
+
+                e.target.value = value;
+            });
+        });
+
+        // Máscara para telefone do solicitante também
+        document.getElementById('telefone_solicitante').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+
+            if (value.length > 6) {
+                value = `(${value.slice(0,2)}) ${value.slice(2,7)}-${value.slice(7)}`;
+            } else if (value.length > 2) {
+                value = `(${value.slice(0,2)}) ${value.slice(2)}`;
+            } else if (value.length > 0) {
+                value = `(${value}`;
+            }
+
+            e.target.value = value;
+        });
+    </script>
 </body>
 </html>

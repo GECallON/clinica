@@ -38,6 +38,18 @@ if (!$ag) {
                     <p class="font-medium text-gray-800"><?= htmlspecialchars($ag['nome_paciente']) ?></p>
                 </div>
                 <div>
+                    <p class="text-gray-600">Telefone do Paciente:</p>
+                    <p class="font-medium text-gray-800"><?= htmlspecialchars($ag['telefone_paciente'] ?? 'Não informado') ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Email do Paciente:</p>
+                    <p class="font-medium text-gray-800"><?= htmlspecialchars($ag['email_paciente'] ?? 'Não informado') ?></p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Protocolo:</p>
+                    <p class="font-medium text-gray-800"><?= htmlspecialchars($ag['protocolo'] ?? 'Não informado') ?></p>
+                </div>
+                <div>
                     <p class="text-gray-600">Convênio:</p>
                     <p class="font-medium text-gray-800"><?= htmlspecialchars($ag['convenio']) ?></p>
                 </div>

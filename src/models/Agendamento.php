@@ -72,10 +72,11 @@ class Agendamento {
         $stmt = $this->db->prepare("
             INSERT INTO agendamentos (
                 nome_solicitante, email_solicitante, telefone_solicitante,
-                nome_paciente, procedimento_id, data_cirurgia, hora_cirurgia,
+                nome_paciente, telefone_paciente, email_paciente, protocolo,
+                procedimento_id, data_cirurgia, hora_cirurgia,
                 hospital, medico_id, convenio, situacao_id,
                 material_necessario, observacoes, arquivo_anexo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         return $stmt->execute([
@@ -83,6 +84,9 @@ class Agendamento {
             $data['email_solicitante'],
             $data['telefone_solicitante'],
             $data['nome_paciente'],
+            $data['telefone_paciente'] ?? null,
+            $data['email_paciente'] ?? null,
+            $data['protocolo'] ?? null,
             $data['procedimento_id'],
             $data['data_cirurgia'],
             $data['hora_cirurgia'],
@@ -103,6 +107,9 @@ class Agendamento {
                 email_solicitante = ?,
                 telefone_solicitante = ?,
                 nome_paciente = ?,
+                telefone_paciente = ?,
+                email_paciente = ?,
+                protocolo = ?,
                 procedimento_id = ?,
                 data_cirurgia = ?,
                 hora_cirurgia = ?,
@@ -121,6 +128,9 @@ class Agendamento {
             $data['email_solicitante'],
             $data['telefone_solicitante'],
             $data['nome_paciente'],
+            $data['telefone_paciente'] ?? null,
+            $data['email_paciente'] ?? null,
+            $data['protocolo'] ?? null,
             $data['procedimento_id'],
             $data['data_cirurgia'],
             $data['hora_cirurgia'],
