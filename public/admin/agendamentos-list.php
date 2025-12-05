@@ -66,6 +66,7 @@ $version = time();
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Procedimento</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Hospital</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Situação</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">WhatsApp</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Ações</th>
                             </tr>
                         </thead>
@@ -95,11 +96,26 @@ $version = time();
                                         <?= htmlspecialchars($ag['situacao_nome']) ?>
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
-                                    <button onclick="viewDetails(<?= $ag['id'] ?>)" class="btn-muted inline-flex items-center gap-2">
-                                        <i class="fas fa-eye text-slate-500"></i>
-                                        Detalhes
+                                <td class="px-6 py-4 text-center">
+                                    <button
+                                        onclick="enviarWhatsApp(<?= $ag['id'] ?>)"
+                                        id="whatsapp-btn-<?= $ag['id'] ?>"
+                                        class="w-10 h-10 rounded-full flex items-center justify-center transition <?= $ag['whatsapp_enviado'] ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 hover:bg-gray-300' ?>"
+                                        title="<?= $ag['whatsapp_enviado'] ? 'Mensagem enviada em ' . date('d/m/Y H:i', strtotime($ag['whatsapp_enviado_em'])) : 'Enviar mensagem via WhatsApp' ?>">
+                                        <i class="fab fa-whatsapp text-xl <?= $ag['whatsapp_enviado'] ? 'text-white' : 'text-gray-600' ?>"></i>
                                     </button>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex gap-2">
+                                        <a href="agendamento-create.php?id=<?= $ag['id'] ?>" class="btn-muted inline-flex items-center gap-2">
+                                            <i class="fas fa-edit text-blue-500"></i>
+                                            Editar
+                                        </a>
+                                        <button onclick="viewDetails(<?= $ag['id'] ?>)" class="btn-muted inline-flex items-center gap-2">
+                                            <i class="fas fa-eye text-slate-500"></i>
+                                            Detalhes
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -113,6 +129,54 @@ $version = time();
     <script>
         function viewDetails(id) {
             window.location.href = 'agendamento-view.php?id=' + id;
+        }
+
+        async function enviarWhatsApp(id) {
+            const btn = document.getElementById('whatsapp-btn-' + id);
+            const icon = btn.querySelector('i');
+
+            // Desabilitar botão
+            btn.disabled = true;
+            icon.className = 'fas fa-spinner fa-spin text-xl text-white';
+            btn.className = 'w-10 h-10 rounded-full flex items-center justify-center transition bg-blue-500';
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'enviar');
+                formData.append('agendamento_id', id);
+
+                const response = await fetch('mensagens.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Sucesso - botão verde
+                    btn.className = 'w-10 h-10 rounded-full flex items-center justify-center transition bg-green-500 hover:bg-green-600';
+                    icon.className = 'fab fa-whatsapp text-xl text-white';
+                    btn.title = 'Mensagem enviada com sucesso!';
+
+                    // Mostrar notificação
+                    alert('✅ ' + result.message);
+                } else {
+                    // Erro - voltar ao estado anterior
+                    btn.className = 'w-10 h-10 rounded-full flex items-center justify-center transition bg-gray-200 hover:bg-gray-300';
+                    icon.className = 'fab fa-whatsapp text-xl text-gray-600';
+
+                    alert('❌ ' + result.message);
+                }
+            } catch (error) {
+                // Erro de rede
+                btn.className = 'w-10 h-10 rounded-full flex items-center justify-center transition bg-gray-200 hover:bg-gray-300';
+                icon.className = 'fab fa-whatsapp text-xl text-gray-600';
+
+                alert('❌ Erro ao enviar mensagem. Tente novamente.');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
