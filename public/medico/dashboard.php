@@ -232,7 +232,6 @@ $version = time();
                         </a>
 
                         <?php
-                        // DEBUG: Renderizando <?= count($situacoes) ?> situações
                         foreach ($situacoes as $situacao):
                             $isActive = isset($_GET['situacao_id']) && $_GET['situacao_id'] == $situacao['id'];
                             $count = 0;
@@ -243,7 +242,6 @@ $version = time();
                                 }
                             }
                         ?>
-                        <!-- CARD: <?= htmlspecialchars($situacao['nome']) ?> (ID: <?= $situacao['id'] ?>) -->
                         <a href="dashboard.php?situacao_id=<?= $situacao['id'] ?>" class="group relative overflow-hidden rounded-xl p-4 border-2 transition-all hover:shadow-lg <?= $isActive ? 'bg-opacity-10' : 'border-slate-200 bg-white hover:border-slate-300' ?>" style="<?= $isActive ? 'border-color: ' . $situacao['cor'] . '; background-color: ' . $situacao['cor'] . '15;' : '' ?>">
                             <div class="flex items-center gap-3">
                                 <span class="icon-chip <?= $isActive ? 'text-white' : '' ?>" style="<?= $isActive ? 'background: ' . $situacao['cor'] . ';' : 'background: ' . $situacao['cor'] . '22; color: ' . $situacao['cor'] . ';' ?>">
