@@ -114,21 +114,6 @@ $v = time();
                 </button>
             </form>
 
-            <div class="mt-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-5 text-sm">
-                <p class="font-semibold text-slate-600 mb-2">
-                    <i class="fas fa-info-circle mr-2 text-indigo-500"></i>Credenciais de demonstração
-                </p>
-                <div class="grid gap-3 text-slate-500">
-                    <p>
-                        <span class="font-semibold text-slate-700">Administrador:</span>
-                        admin@sistema.com • admin123
-                    </p>
-                    <p>
-                        <span class="font-semibold text-slate-700">Médico:</span>
-                        joao.silva@clinica.com • medico123
-                    </p>
-                </div>
-            </div>
         </section>
     </div>
 

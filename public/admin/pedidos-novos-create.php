@@ -1,19 +1,26 @@
 <?php
-require_once __DIR__ . '/../../src/config.php';
-require_once __DIR__ . '/../../src/models/Usuario.php';
-require_once __DIR__ . '/../../src/models/PedidoNovo.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../index.php');
+try {
+    require_once __DIR__ . '/../../src/config.php';
+    require_once __DIR__ . '/../../src/models/Usuario.php';
+    require_once __DIR__ . '/../../src/models/PedidoNovo.php';
+
+    if (!isLoggedIn() || !isAdmin()) {
+        redirect('../index.php');
+    }
+
+    $usuarioModel = new Usuario();
+    $pedidoModel = new PedidoNovo();
+    require_once __DIR__ . '/../../src/models/Situacao.php';
+    $situacaoModel = new Situacao();
+
+    $medicos = $usuarioModel->getMedicos();
+    $situacoes = $situacaoModel->getAtivos();
+} catch (Exception $e) {
+    die("ERRO: " . $e->getMessage() . "<br>FILE: " . $e->getFile() . "<br>LINE: " . $e->getLine() . "<br>TRACE: " . $e->getTraceAsString());
 }
-
-$usuarioModel = new Usuario();
-$pedidoModel = new PedidoNovo();
-require_once __DIR__ . '/../../src/models/Situacao.php';
-$situacaoModel = new Situacao();
-
-$medicos = $usuarioModel->getMedicos();
-$situacoes = $situacaoModel->getAtivos();
 
 $isEdit = isset($_GET['id']);
 $pedido = null;
@@ -75,17 +82,12 @@ $version = time();
                             <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Informações do pedido</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div class="form-field">
-                                    <label for="nome_paciente">Nome do paciente *</label>
+                                    <label for="nome_paciente">Nome do Paciente *</label>
                                     <input id="nome_paciente" name="nome_paciente" type="text" class="w-full"
                                            value="<?= $isEdit ? htmlspecialchars($pedido['nome_paciente']) : '' ?>" required>
                                 </div>
                                 <div class="form-field">
-                                    <label for="telefone">Número do Paciente *</label>
-                                    <input id="telefone" name="telefone" type="text" class="w-full telefone-mask" placeholder="(00) 00000-0000"
-                                           value="<?= $isEdit ? htmlspecialchars($pedido['telefone']) : '' ?>" required>
-                                </div>
-                                <div class="form-field">
-                                    <label for="medico_id">Médico *</label>
+                                    <label for="medico_id">Nome do Médico *</label>
                                     <select id="medico_id" name="medico_id" class="w-full" required>
                                         <option value="">Selecione o médico...</option>
                                         <?php foreach ($medicos as $m): ?>
@@ -104,6 +106,26 @@ $version = time();
                                     <label for="fornecedor">Fornecedor</label>
                                     <input id="fornecedor" name="fornecedor" type="text" class="w-full" placeholder="Nome do fornecedor"
                                            value="<?= $isEdit ? htmlspecialchars($pedido['fornecedor']) : '' ?>">
+                                </div>
+                                <div class="form-field">
+                                    <label for="procedimento">Procedimento *</label>
+                                    <input id="procedimento" name="procedimento" type="text" class="w-full"
+                                           value="<?= $isEdit ? htmlspecialchars($pedido['procedimento']) : '' ?>" required>
+                                </div>
+                                <div class="form-field">
+                                    <label for="data_recebimento">Data do Recebimento</label>
+                                    <input id="data_recebimento" name="data_recebimento" type="date" class="w-full"
+                                           value="<?= $isEdit ? htmlspecialchars($pedido['data_recebimento']) : '' ?>">
+                                </div>
+                                <div class="form-field">
+                                    <label for="origem">Origem</label>
+                                    <input id="origem" name="origem" type="text" class="w-full" placeholder="Origem do pedido"
+                                           value="<?= $isEdit ? htmlspecialchars($pedido['origem']) : '' ?>">
+                                </div>
+                                <div class="form-field">
+                                    <label for="valor_material">Valor do Material</label>
+                                    <input id="valor_material" name="valor_material" type="number" step="0.01" class="w-full" placeholder="0.00"
+                                           value="<?= $isEdit ? htmlspecialchars($pedido['valor_material']) : '' ?>">
                                 </div>
                                 <div class="form-field md:col-span-2">
                                     <label for="observacao">Observação</label>

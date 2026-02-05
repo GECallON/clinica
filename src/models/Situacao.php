@@ -53,6 +53,23 @@ class Situacao {
     }
 
     public function delete($id) {
+        // Primeiro, ocultar todos os agendamentos vinculados a esta situação
+        $stmtAgendamentos = $this->db->prepare("
+            UPDATE agendamentos
+            SET deleted_at = NOW()
+            WHERE situacao_id = ? AND deleted_at IS NULL
+        ");
+        $stmtAgendamentos->execute([$id]);
+
+        // Ocultar todos os pedidos vinculados a esta situação
+        $stmtPedidos = $this->db->prepare("
+            UPDATE pedidos_novos
+            SET deleted_at = NOW()
+            WHERE situacao_id = ? AND deleted_at IS NULL
+        ");
+        $stmtPedidos->execute([$id]);
+
+        // Depois deletar a situação
         $stmt = $this->db->prepare("DELETE FROM situacoes WHERE id = ?");
         return $stmt->execute([$id]);
     }

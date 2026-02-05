@@ -81,19 +81,19 @@ $version = time();
                             <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Informações do agendamento</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div class="form-field">
-                                    <label for="nome_solicitante">Nome do solicitante *</label>
+                                    <label for="nome_solicitante">Nome do Solicitante *</label>
                                     <input id="nome_solicitante" name="nome_solicitante" type="text" class="w-full"
                                            value="<?= $isEdit ? htmlspecialchars($agendamento['nome_solicitante']) : '' ?>" required>
                                 </div>
                                 <div class="form-field">
-                                    <label for="telefone">Número do Paciente *</label>
-                                    <input id="telefone" name="telefone" type="text" class="w-full telefone-mask" placeholder="(00) 00000-0000"
-                                           value="<?= $isEdit ? htmlspecialchars($agendamento['telefone']) : '' ?>" required>
-                                </div>
-                                <div class="form-field">
-                                    <label for="nome_paciente">Nome do paciente *</label>
+                                    <label for="nome_paciente">Nome do Paciente *</label>
                                     <input id="nome_paciente" name="nome_paciente" type="text" class="w-full"
                                            value="<?= $isEdit ? htmlspecialchars($agendamento['nome_paciente']) : '' ?>" required>
+                                </div>
+                                <div class="form-field">
+                                    <label for="telefone">Número de Telefone *</label>
+                                    <input id="telefone" name="telefone" type="text" class="w-full telefone-mask" placeholder="(00) 00000-0000"
+                                           value="<?= $isEdit ? htmlspecialchars($agendamento['telefone']) : '' ?>" required>
                                 </div>
                                 <div class="form-field">
                                     <label for="protocolo">Protocolo</label>
@@ -117,7 +117,7 @@ $version = time();
                                     </select>
                                 </div>
                                 <div class="form-field">
-                                    <label for="medico_id">Médico solicitante *</label>
+                                    <label for="medico_id">Médico Solicitante *</label>
                                     <select id="medico_id" name="medico_id" class="w-full" required>
                                         <option value="">Selecione...</option>
                                         <?php foreach ($medicos as $m): ?>
@@ -128,12 +128,12 @@ $version = time();
                                     </select>
                                 </div>
                                 <div class="form-field">
-                                    <label for="data_cirurgia">Data do procedimento *</label>
+                                    <label for="data_cirurgia">Data do Procedimento *</label>
                                     <input id="data_cirurgia" name="data_cirurgia" type="date" class="w-full"
                                            value="<?= $isEdit ? $agendamento['data_cirurgia'] : '' ?>" required>
                                 </div>
                                 <div class="form-field">
-                                    <label for="hora_cirurgia">Hora do procedimento *</label>
+                                    <label for="hora_cirurgia">Hora do Procedimento *</label>
                                     <input id="hora_cirurgia" name="hora_cirurgia" type="time" class="w-full"
                                            value="<?= $isEdit ? $agendamento['hora_cirurgia'] : '' ?>" required>
                                 </div>
@@ -149,37 +149,20 @@ $version = time();
                                     <p class="mt-2 text-xs text-slate-400">Selecione ou digite o nome do hospital</p>
                                 </div>
                                 <div class="form-field">
-                                    <label for="email_hospital">Email do Hospital *</label>
-                                    <input id="email_hospital" name="email_hospital" type="email" class="w-full" placeholder="email@hospital.com.br" required readonly
-                                           value="<?= $isEdit ? htmlspecialchars($agendamento['email_hospital']) : '' ?>">
-                                    <p class="mt-2 text-xs text-slate-400">Preenchido automaticamente</p>
+                                    <label for="fornecedor">Fornecedor</label>
+                                    <input id="fornecedor" name="fornecedor" type="text" class="w-full" placeholder="Nome do fornecedor"
+                                           value="<?= $isEdit ? htmlspecialchars($agendamento['fornecedor']) : '' ?>">
                                 </div>
                                 <div class="form-field">
-                                    <label for="fornecedor1">Fornecedor 1</label>
-                                    <input id="fornecedor1" name="fornecedor1" type="text" class="w-full" placeholder="Nome do primeiro fornecedor"
-                                           value="<?= $isEdit ? htmlspecialchars($agendamento['fornecedor1']) : '' ?>">
-                                </div>
-                                <div class="form-field">
-                                    <label for="fornecedor2">Fornecedor 2</label>
-                                    <input id="fornecedor2" name="fornecedor2" type="text" class="w-full" placeholder="Nome do segundo fornecedor"
-                                           value="<?= $isEdit ? htmlspecialchars($agendamento['fornecedor2']) : '' ?>">
-                                </div>
-                                <div class="form-field">
-                                    <label for="situacao_id">Situação *</label>
-                                    <select id="situacao_id" name="situacao_id" class="w-full" required>
-                                        <option value="">Selecione...</option>
-                                        <?php foreach ($situacoes as $s): ?>
-                                            <option value="<?= $s['id'] ?>" <?= $isEdit && $agendamento['situacao_id'] == $s['id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($s['nome']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <label for="valor_material">Valor do Material</label>
+                                    <input id="valor_material" name="valor_material" type="number" step="0.01" class="w-full" placeholder="0.00"
+                                           value="<?= $isEdit ? htmlspecialchars($agendamento['valor_material']) : '' ?>">
                                 </div>
                             </div>
                         </div>
 
                         <div class="space-y-4">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Material, observações e anexo</h2>
+                            <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Informações complementares</h2>
                             <div class="grid grid-cols-1 gap-5">
                                 <div class="form-field">
                                     <label for="material_necessario">Material</label>
@@ -238,34 +221,6 @@ $version = time();
             });
         });
 
-        // Autocomplete de email do hospital
-        const hospitalInput = document.getElementById('hospital');
-        const emailHospitalInput = document.getElementById('email_hospital');
-        const hospitaisData = <?= json_encode(array_map(function($h) {
-            return ['nome' => $h['nome'], 'email' => $h['email']];
-        }, $hospitais)) ?>;
-
-        hospitalInput.addEventListener('input', function(e) {
-            const hospitalNome = e.target.value;
-            const hospital = hospitaisData.find(h => h.nome === hospitalNome);
-
-            if (hospital) {
-                emailHospitalInput.value = hospital.email;
-                emailHospitalInput.classList.remove('bg-slate-100');
-                emailHospitalInput.classList.add('bg-green-50');
-            } else {
-                emailHospitalInput.value = '';
-                emailHospitalInput.classList.remove('bg-green-50');
-                emailHospitalInput.classList.add('bg-slate-100');
-            }
-        });
-
-        // Permitir edição manual do email
-        emailHospitalInput.addEventListener('dblclick', function() {
-            this.readOnly = false;
-            this.classList.remove('bg-green-50', 'bg-slate-100');
-            this.focus();
-        });
     </script>
 </body>
 </html>
