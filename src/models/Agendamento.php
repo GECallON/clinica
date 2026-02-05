@@ -418,4 +418,24 @@ class Agendamento {
         $stmt->execute([$medico_id, $medico_id]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Retorna o histórico completo de status de um agendamento
+     */
+    public function getHistorico($agendamento_id) {
+        $stmt = $this->db->prepare("
+            SELECT
+                h.*,
+                s.nome as situacao_nome,
+                s.cor as situacao_cor,
+                u.nome as usuario_nome
+            FROM agendamentos_status_historico h
+            JOIN situacoes s ON h.situacao_id = s.id
+            JOIN usuarios u ON h.usuario_id = u.id
+            WHERE h.agendamento_id = ?
+            ORDER BY h.created_at DESC
+        ");
+        $stmt->execute([$agendamento_id]);
+        return $stmt->fetchAll();
+    }
 }

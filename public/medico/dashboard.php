@@ -115,6 +115,10 @@ $version = time();
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <a href="agendamentos.php" class="btn-primary" title="Ver todos os agendamentos">
+                        <i class="fas fa-calendar-check"></i>
+                        Agendamentos
+                    </a>
                     <button id="notificationBtn" class="btn-muted btn-primary--icon relative">
                         <i class="fas fa-bell text-sm"></i>
                         <?php if (count($agendamentos_proximos) > 0): ?>

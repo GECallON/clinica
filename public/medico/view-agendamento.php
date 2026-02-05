@@ -6,12 +6,32 @@ if (!isLoggedIn() || !isMedico()) {
     die('Acesso negado');
 }
 
+$agendamentoModel = new Agendamento();
+
+// Endpoint para buscar histórico
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_historico') {
+    $id = $_GET['id'] ?? 0;
+    $ag = $agendamentoModel->getById($id);
+
+    // Verificar se o agendamento pertence ao médico logado
+    if (!$ag || $ag['medico_id'] != $_SESSION['user_id']) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Sem permissão']);
+        exit;
+    }
+
+    $historico = $agendamentoModel->getHistorico($id);
+
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'historico' => $historico]);
+    exit;
+}
+
 $id = $_GET['id'] ?? null;
 if (!$id) {
     die('ID inválido');
 }
 
-$agendamentoModel = new Agendamento();
 $ag = $agendamentoModel->getById($id);
 
 if (!$ag || $ag['medico_id'] != $_SESSION['user_id']) {
