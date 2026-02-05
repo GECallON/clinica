@@ -8,10 +8,54 @@ if (!isLoggedIn() || !isMedico()) {
 }
 
 $agendamentoModel = new Agendamento();
-$agendamentos = $agendamentoModel->getAll($_SESSION['user_id']);
-$events = $agendamentoModel->getCalendarEvents($_SESSION['user_id']);
 
-$total_agendamentos = count($agendamentos);
+// Capturar filtros
+$filtros = ['medico_id' => $_SESSION['user_id']];
+if (!empty($_GET['busca'])) {
+    $filtros['busca'] = $_GET['busca'];
+}
+if (!empty($_GET['situacao_id'])) {
+    $filtros['situacao_id'] = $_GET['situacao_id'];
+}
+if (!empty($_GET['data_inicio'])) {
+    $filtros['data_inicio'] = $_GET['data_inicio'];
+}
+if (!empty($_GET['data_fim'])) {
+    $filtros['data_fim'] = $_GET['data_fim'];
+}
+
+$agendamentos = $agendamentoModel->getAllWithFilters($filtros);
+
+// Gerar eventos do calendário a partir dos agendamentos filtrados OU todos do médico
+$eventos_calendario = [];
+$agendamentos_calendario = empty($filtros['busca']) && empty($filtros['situacao_id'])
+    ? $agendamentoModel->getAll($_SESSION['user_id'])
+    : $agendamentos;
+
+foreach ($agendamentos_calendario as $ag) {
+    $eventos_calendario[] = [
+        'id' => $ag['id'],
+        'title' => $ag['nome_paciente'] . ' - ' . $ag['procedimento_nome'],
+        'start' => $ag['data_cirurgia'] . 'T' . $ag['hora_cirurgia'],
+        'backgroundColor' => $ag['situacao_cor'],
+        'borderColor' => $ag['situacao_cor'],
+        'extendedProps' => [
+            'hospital' => $ag['hospital'],
+            'medico' => $ag['medico_nome'],
+            'situacao' => $ag['situacao_nome']
+        ]
+    ];
+}
+
+// Carregar situações para o filtro
+if (!class_exists('Situacao')) {
+    require_once __DIR__ . '/../../src/models/Situacao.php';
+}
+$situacaoModel = new Situacao();
+$situacoes = $situacaoModel->getAtivos();
+
+// Estatísticas
+$total_agendamentos = count($agendamentoModel->getAllWithFilters(['medico_id' => $_SESSION['user_id']]));
 $hoje = date('Y-m-d');
 $agora = date('H:i');
 
@@ -19,6 +63,9 @@ $agendamentos_hoje = array_filter($agendamentos, fn($a) => $a['data_cirurgia'] =
 $proximos_7_dias = array_filter($agendamentos, function ($a) use ($hoje) {
     return $a['data_cirurgia'] >= $hoje && $a['data_cirurgia'] <= date('Y-m-d', strtotime('+7 days'));
 });
+
+// Estatísticas por situação para o médico
+$stats_situacao = $agendamentoModel->getStatsBySituacaoMedico($_SESSION['user_id']);
 
 $agendamentos_proximos = array_filter($agendamentos_hoje, function ($a) use ($agora) {
     $hora_agendamento = date('H:i', strtotime($a['hora_cirurgia']));
@@ -161,22 +208,124 @@ $version = time();
                     </div>
                 </section>
 
+                <!-- Filtros Rápidos por Status -->
+                <section class="glass p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-filter text-indigo-600"></i>
+                        Filtros Rápidos
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <a href="dashboard.php" class="group relative overflow-hidden rounded-xl p-4 border-2 transition-all hover:shadow-lg <?= empty($_GET['situacao_id']) ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300' ?>">
+                            <div class="flex items-center gap-3">
+                                <span class="icon-chip <?= empty($_GET['situacao_id']) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600' ?>">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </span>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Todos</p>
+                                    <p class="text-xs text-slate-500"><?= $total_agendamentos ?> agendamentos</p>
+                                </div>
+                            </div>
+                        </a>
+
+                        <?php foreach ($situacoes as $situacao):
+                            $isActive = isset($_GET['situacao_id']) && $_GET['situacao_id'] == $situacao['id'];
+                            $count = 0;
+                            foreach ($stats_situacao as $stat) {
+                                if ($stat['id'] == $situacao['id']) {
+                                    $count = $stat['total'];
+                                    break;
+                                }
+                            }
+                        ?>
+                        <a href="dashboard.php?situacao_id=<?= $situacao['id'] ?>" class="group relative overflow-hidden rounded-xl p-4 border-2 transition-all hover:shadow-lg <?= $isActive ? 'bg-opacity-10' : 'border-slate-200 bg-white' ?>" style="<?= $isActive ? 'border-color: ' . $situacao['cor'] . '; background-color: ' . $situacao['cor'] . '15;' : '' ?>">
+                            <div class="flex items-center gap-3">
+                                <span class="icon-chip <?= $isActive ? 'text-white' : '' ?>" style="<?= $isActive ? 'background: ' . $situacao['cor'] . ';' : 'background: ' . $situacao['cor'] . '22; color: ' . $situacao['cor'] . ';' ?>">
+                                    <i class="fas fa-<?= $situacao['nome'] == 'Autorizado' ? 'check-circle' : ($situacao['nome'] == 'Urgência' ? 'exclamation-triangle' : 'clock') ?>"></i>
+                                </span>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($situacao['nome']) ?></p>
+                                    <p class="text-xs text-slate-500"><?= $count ?> agendamentos</p>
+                                </div>
+                            </div>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <!-- Filtros e Busca -->
+                <section class="glass p-4">
+                    <form method="GET" class="flex flex-wrap gap-3 items-end">
+                        <div class="flex-1 min-w-[200px] max-w-[300px]">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                <i class="fas fa-search text-indigo-500 mr-1"></i>
+                                Buscar Paciente
+                            </label>
+                            <input type="text" name="busca" value="<?= htmlspecialchars($_GET['busca'] ?? '') ?>" placeholder="Nome do paciente..." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                        </div>
+
+                        <div class="flex-1 min-w-[180px] max-w-[250px]">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                <i class="fas fa-tag text-indigo-500 mr-1"></i>
+                                Situação
+                            </label>
+                            <select name="situacao_id" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                                <option value="">Todas</option>
+                                <?php foreach ($situacoes as $situacao): ?>
+                                    <option value="<?= $situacao['id'] ?>" <?= (isset($_GET['situacao_id']) && $_GET['situacao_id'] == $situacao['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($situacao['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button type="submit" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">
+                                <i class="fas fa-filter mr-1"></i>
+                                Filtrar
+                            </button>
+                            <a href="dashboard.php" class="px-4 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition font-semibold">
+                                <i class="fas fa-times mr-1"></i>
+                                Limpar
+                            </a>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Cards de Estatísticas por Situação -->
+                <?php if (!empty($stats_situacao)): ?>
+                <section>
+                    <h3 class="text-lg font-semibold text-slate-900 mb-4">Distribuição por Status</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <?php foreach ($stats_situacao as $stat): ?>
+                        <div class="glass p-5 border-l-4" style="border-color: <?= $stat['cor'] ?>;">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-semibold text-slate-600"><?= htmlspecialchars($stat['nome']) ?></span>
+                                <span class="text-2xl font-bold" style="color: <?= $stat['cor'] ?>;"><?= $stat['total'] ?></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all" style="width: <?= $stat['percentual'] ?>%; background-color: <?= $stat['cor'] ?>;"></div>
+                                </div>
+                                <span class="text-xs font-semibold" style="color: <?= $stat['cor'] ?>;"><?= $stat['percentual'] ?>%</span>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+                <?php endif; ?>
+
                 <section class="glass p-2 inline-flex view-toggle">
-                    <button id="calendarBtn" class="btn-muted btn-primary--icon active" onclick="switchView('calendar')">
-                        <i class="fas fa-calendar"></i>
-                        Agenda
+                    <button id="timelineBtn" class="btn-muted btn-primary--icon active" onclick="switchView('timeline')">
+                        <i class="fas fa-stream"></i>
+                        Timeline
                     </button>
                     <button id="listBtn" class="btn-muted btn-primary--icon" onclick="switchView('list')">
                         <i class="fas fa-list"></i>
                         Lista
                     </button>
-                    <button id="timelineBtn" class="btn-muted btn-primary--icon" onclick="switchView('timeline')">
-                        <i class="fas fa-stream"></i>
-                        Timeline
-                    </button>
                 </section>
 
-                <section id="calendarView" class="glass p-6">
+                <section id="calendarView" class="glass p-6 hidden">
                     <div id="calendar"></div>
                 </section>
 
@@ -221,7 +370,7 @@ $version = time();
                     </table>
                 </section>
 
-                <section id="timelineView" class="hidden space-y-4">
+                <section id="timelineView" class="space-y-4">
                     <?php
                     $grouped = [];
                     foreach ($agendamentos as $ag) {
@@ -273,15 +422,11 @@ $version = time();
     </div>
 
     <script>
-        const events = <?= json_encode($events) ?>;
         const proximos = <?= json_encode(array_values($agendamentos_proximos)) ?>;
 
-        const calendarEl = document.getElementById('calendar');
-        const calendarView = document.getElementById('calendarView');
         const listView = document.getElementById('listView');
         const timelineView = document.getElementById('timelineView');
 
-        const calendarBtn = document.getElementById('calendarBtn');
         const listBtn = document.getElementById('listBtn');
         const timelineBtn = document.getElementById('timelineBtn');
 
@@ -290,40 +435,14 @@ $version = time();
         const detailsModal = document.getElementById('detailsModal');
         const modalContent = document.getElementById('modalContent');
 
-        let calendar;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                locale: 'pt-br',
-                height: 'auto',
-                headerToolbar: {
-                    left: 'title',
-                    center: '',
-                    right: 'prev,next today'
-                },
-                events,
-                eventClick: info => {
-                    viewDetails(info.event.id);
-                }
-            });
-            calendar.render();
-        });
-
         function switchView(view) {
-            calendarBtn.classList.remove('active');
             listBtn.classList.remove('active');
             timelineBtn.classList.remove('active');
 
-            calendarView.classList.add('hidden');
             listView.classList.add('hidden');
             timelineView.classList.add('hidden');
 
-            if (view === 'calendar') {
-                calendarBtn.classList.add('active');
-                calendarView.classList.remove('hidden');
-                calendar.updateSize();
-            } else if (view === 'list') {
+            if (view === 'list') {
                 listBtn.classList.add('active');
                 listView.classList.remove('hidden');
             } else {
