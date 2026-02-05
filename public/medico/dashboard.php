@@ -212,9 +212,9 @@ $version = time();
                 <section class="glass p-6">
                     <h3 class="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                         <i class="fas fa-filter text-indigo-600"></i>
-                        Filtros Rápidos
+                        Filtros Rápidos por Status
                     </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         <a href="dashboard.php" class="group relative overflow-hidden rounded-xl p-4 border-2 transition-all hover:shadow-lg <?= empty($_GET['situacao_id']) ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300' ?>">
                             <div class="flex items-center gap-3">
                                 <span class="icon-chip <?= empty($_GET['situacao_id']) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600' ?>">
@@ -227,7 +227,9 @@ $version = time();
                             </div>
                         </a>
 
-                        <?php foreach ($situacoes as $situacao):
+                        <?php
+                        // Debug: Total de situações = <?= count($situacoes) ?>
+                        foreach ($situacoes as $situacao):
                             $isActive = isset($_GET['situacao_id']) && $_GET['situacao_id'] == $situacao['id'];
                             $count = 0;
                             foreach ($stats_situacao as $stat) {
@@ -237,14 +239,28 @@ $version = time();
                                 }
                             }
                         ?>
-                        <a href="dashboard.php?situacao_id=<?= $situacao['id'] ?>" class="group relative overflow-hidden rounded-xl p-4 border-2 transition-all hover:shadow-lg <?= $isActive ? 'bg-opacity-10' : 'border-slate-200 bg-white' ?>" style="<?= $isActive ? 'border-color: ' . $situacao['cor'] . '; background-color: ' . $situacao['cor'] . '15;' : '' ?>">
+                        <a href="dashboard.php?situacao_id=<?= $situacao['id'] ?>" class="group relative overflow-hidden rounded-xl p-4 border-2 transition-all hover:shadow-lg <?= $isActive ? 'bg-opacity-10' : 'border-slate-200 bg-white hover:border-slate-300' ?>" style="<?= $isActive ? 'border-color: ' . $situacao['cor'] . '; background-color: ' . $situacao['cor'] . '15;' : '' ?>">
                             <div class="flex items-center gap-3">
                                 <span class="icon-chip <?= $isActive ? 'text-white' : '' ?>" style="<?= $isActive ? 'background: ' . $situacao['cor'] . ';' : 'background: ' . $situacao['cor'] . '22; color: ' . $situacao['cor'] . ';' ?>">
-                                    <i class="fas fa-<?= $situacao['nome'] == 'Autorizado' ? 'check-circle' : ($situacao['nome'] == 'Urgência' ? 'exclamation-triangle' : 'clock') ?>"></i>
+                                    <i class="fas fa-<?php
+                                        if (stripos($situacao['nome'], 'autorizado') !== false || stripos($situacao['nome'], 'agendado') !== false) {
+                                            echo 'check-circle';
+                                        } elseif (stripos($situacao['nome'], 'análise') !== false || stripos($situacao['nome'], 'aguardando') !== false) {
+                                            echo 'clock';
+                                        } elseif (stripos($situacao['nome'], 'pendente') !== false) {
+                                            echo 'hourglass-half';
+                                        } elseif (stripos($situacao['nome'], 'arquivado') !== false) {
+                                            echo 'archive';
+                                        } elseif (stripos($situacao['nome'], 'cotando') !== false) {
+                                            echo 'calculator';
+                                        } else {
+                                            echo 'tag';
+                                        }
+                                    ?>"></i>
                                 </span>
                                 <div>
                                     <p class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($situacao['nome']) ?></p>
-                                    <p class="text-xs text-slate-500"><?= $count ?> agendamentos</p>
+                                    <p class="text-xs text-slate-500"><?= $count ?> agend.</p>
                                 </div>
                             </div>
                         </a>
