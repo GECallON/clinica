@@ -213,9 +213,11 @@ $version = time();
                         foreach ($situacoes as $situacao):
                             $isActive = isset($_GET['situacao_id']) && $_GET['situacao_id'] == $situacao['id'];
                             $count = 0;
+                            $percentual = 0;
                             foreach ($stats_situacao as $stat) {
                                 if ($stat['id'] == $situacao['id']) {
                                     $count = $stat['total'];
+                                    $percentual = $stat['percentual'];
                                     break;
                                 }
                             }
@@ -239,9 +241,9 @@ $version = time();
                                         }
                                     ?>"></i>
                                 </span>
-                                <div>
+                                <div class="flex-1">
                                     <p class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($situacao['nome']) ?></p>
-                                    <p class="text-xs text-slate-500"><?= $count ?> pedidos</p>
+                                    <p class="text-xs text-slate-500"><?= $count ?> pedidos • <?= $percentual ?>%</p>
                                 </div>
                             </div>
                         </a>
@@ -287,29 +289,6 @@ $version = time();
                         </div>
                     </form>
                 </section>
-
-                <!-- Cards de Estatísticas por Situação -->
-                <?php if (!empty($stats_situacao)): ?>
-                <section>
-                    <h3 class="text-lg font-semibold text-slate-900 mb-4">Distribuição por Status</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <?php foreach ($stats_situacao as $stat): ?>
-                        <div class="glass p-5 border-l-4" style="border-color: <?= $stat['cor'] ?>;">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-semibold text-slate-600"><?= htmlspecialchars($stat['nome']) ?></span>
-                                <span class="text-2xl font-bold" style="color: <?= $stat['cor'] ?>;"><?= $stat['total'] ?></span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full transition-all" style="width: <?= $stat['percentual'] ?>%; background-color: <?= $stat['cor'] ?>;"></div>
-                                </div>
-                                <span class="text-xs font-semibold" style="color: <?= $stat['cor'] ?>;"><?= $stat['percentual'] ?>%</span>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
-                <?php endif; ?>
 
                 <section class="glass p-2 inline-flex view-toggle">
                     <button id="timelineBtn" class="btn-muted btn-primary--icon active" onclick="switchView('timeline')">
