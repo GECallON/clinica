@@ -92,6 +92,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         redirect('agendamentos-list.php');
     }
+
+    if ($action === 'delete') {
+        $id = $_POST['id'] ?? 0;
+
+        if ($agendamentoModel->delete($id)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Agendamento excluído com sucesso!']);
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Erro ao excluir agendamento']);
+        }
+        exit;
+    }
 }
 
 redirect('agendamentos-list.php');

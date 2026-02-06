@@ -115,6 +115,10 @@ $version = time();
                                             <i class="fas fa-eye text-slate-500"></i>
                                             Detalhes
                                         </button>
+                                        <button onclick="deleteAgendamento(<?= $ag['id'] ?>, '<?= htmlspecialchars($ag['nome_paciente']) ?>')" class="btn-muted inline-flex items-center gap-2">
+                                            <i class="fas fa-trash text-red-500"></i>
+                                            Excluir
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -129,6 +133,35 @@ $version = time();
     <script>
         function viewDetails(id) {
             window.location.href = 'agendamento-view.php?id=' + id;
+        }
+
+        async function deleteAgendamento(id, nomePaciente) {
+            if (!confirm(`Tem certeza que deseja excluir o agendamento do paciente "${nomePaciente}"?\n\nEsta ação não pode ser desfeita.`)) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('id', id);
+
+                const response = await fetch('agendamentos.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Agendamento excluído com sucesso!');
+                    location.reload();
+                } else {
+                    alert('❌ Erro ao excluir agendamento: ' + (result.message || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('❌ Erro ao excluir agendamento. Tente novamente.');
+                console.error(error);
+            }
         }
 
         async function enviarWhatsApp(id) {
