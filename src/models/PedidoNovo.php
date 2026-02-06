@@ -293,4 +293,32 @@ class PedidoNovo {
         $stmt->execute([$pedido_id]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Retorna estatísticas de pedidos por situação para um médico específico
+     */
+    public function getStatsBySituacaoMedico($medico_id) {
+        $stmt = $this->db->prepare("
+            SELECT
+                s.id,
+                s.nome,
+                s.cor,
+                COUNT(p.id) as total,
+                ROUND((COUNT(p.id) / NULLIF((SELECT COUNT(*) FROM pedidos_novos WHERE medico_id = ? AND deleted_at IS NULL), 0) * 100), 1) as percentual
+            FROM situacoes s
+            LEFT JOIN pedidos_novos p ON p.situacao_id = s.id AND p.medico_id = ? AND p.deleted_at IS NULL
+            GROUP BY s.id, s.nome, s.cor
+            HAVING total > 0
+            ORDER BY total DESC
+        ");
+        $stmt->execute([$medico_id, $medico_id]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Retorna pedidos com filtros (similar ao getAll mas com suporte a mais filtros)
+     */
+    public function getAllWithFilters($filtros = []) {
+        return $this->getAll($filtros);
+    }
 }

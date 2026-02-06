@@ -1,13 +1,13 @@
 <?php
 require_once __DIR__ . '/../../src/config.php';
 require_once __DIR__ . '/../../src/models/Usuario.php';
-require_once __DIR__ . '/../../src/models/Agendamento.php';
+require_once __DIR__ . '/../../src/models/PedidoNovo.php';
 
 if (!isLoggedIn() || !isMedico()) {
     redirect('../index.php');
 }
 
-$agendamentoModel = new Agendamento();
+$pedidoModel = new PedidoNovo();
 
 // Capturar filtros
 $filtros = ['medico_id' => $_SESSION['user_id']];
@@ -24,28 +24,7 @@ if (!empty($_GET['data_fim'])) {
     $filtros['data_fim'] = $_GET['data_fim'];
 }
 
-$agendamentos = $agendamentoModel->getAllWithFilters($filtros);
-
-// Gerar eventos do calendário a partir dos agendamentos filtrados OU todos do médico
-$eventos_calendario = [];
-$agendamentos_calendario = empty($filtros['busca']) && empty($filtros['situacao_id'])
-    ? $agendamentoModel->getAll($_SESSION['user_id'])
-    : $agendamentos;
-
-foreach ($agendamentos_calendario as $ag) {
-    $eventos_calendario[] = [
-        'id' => $ag['id'],
-        'title' => $ag['nome_paciente'] . ' - ' . $ag['procedimento_nome'],
-        'start' => $ag['data_cirurgia'] . 'T' . $ag['hora_cirurgia'],
-        'backgroundColor' => $ag['situacao_cor'],
-        'borderColor' => $ag['situacao_cor'],
-        'extendedProps' => [
-            'hospital' => $ag['hospital'],
-            'medico' => $ag['medico_nome'],
-            'situacao' => $ag['situacao_nome']
-        ]
-    ];
-}
+$pedidos = $pedidoModel->getAllWithFilters($filtros);
 
 // Carregar situações para o filtro
 if (!class_exists('Situacao')) {
@@ -55,22 +34,25 @@ $situacaoModel = new Situacao();
 $situacoes = $situacaoModel->getAtivos();
 
 // Estatísticas
-$total_agendamentos = count($agendamentoModel->getAllWithFilters(['medico_id' => $_SESSION['user_id']]));
+$total_pedidos = count($pedidoModel->getAllWithFilters(['medico_id' => $_SESSION['user_id']]));
 $hoje = date('Y-m-d');
 $agora = date('H:i');
 
-$agendamentos_hoje = array_filter($agendamentos, fn($a) => $a['data_cirurgia'] === $hoje);
-$proximos_7_dias = array_filter($agendamentos, function ($a) use ($hoje) {
-    return $a['data_cirurgia'] >= $hoje && $a['data_cirurgia'] <= date('Y-m-d', strtotime('+7 days'));
+$pedidos_hoje = array_filter($pedidos, function($p) use ($hoje) {
+    return isset($p['data_recebimento']) && $p['data_recebimento'] === $hoje;
+});
+$proximos_7_dias = array_filter($pedidos, function ($p) use ($hoje) {
+    return isset($p['data_recebimento']) && $p['data_recebimento'] >= $hoje && $p['data_recebimento'] <= date('Y-m-d', strtotime('+7 days'));
 });
 
 // Estatísticas por situação para o médico
-$stats_situacao = $agendamentoModel->getStatsBySituacaoMedico($_SESSION['user_id']);
+$stats_situacao = $pedidoModel->getStatsBySituacaoMedico($_SESSION['user_id']);
 
-$agendamentos_proximos = array_filter($agendamentos_hoje, function ($a) use ($agora) {
-    $hora_agendamento = date('H:i', strtotime($a['hora_cirurgia']));
-    $diff_minutos = (strtotime($hora_agendamento) - strtotime($agora)) / 60;
-    return $diff_minutos > 0 && $diff_minutos <= 120;
+$pedidos_proximos = array_filter($pedidos_hoje, function ($p) use ($agora) {
+    if (!isset($p['created_at'])) return false;
+    $hora_criacao = date('H:i', strtotime($p['created_at']));
+    $diff_minutos = (strtotime($agora) - strtotime($hora_criacao)) / 60;
+    return $diff_minutos >= 0 && $diff_minutos <= 120;
 });
 
 $flash = getFlashMessage();
@@ -115,15 +97,11 @@ $version = time();
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <a href="agendamentos.php" class="btn-primary" title="Ver todos os agendamentos">
-                        <i class="fas fa-calendar-check"></i>
-                        Agendamentos
-                    </a>
                     <button id="notificationBtn" class="btn-muted btn-primary--icon relative">
                         <i class="fas fa-bell text-sm"></i>
-                        <?php if (count($agendamentos_proximos) > 0): ?>
+                        <?php if (count($pedidos_proximos) > 0): ?>
                             <span class="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-rose-500 text-white text-xs font-semibold flex items-center justify-center">
-                                <?= count($agendamentos_proximos) ?>
+                                <?= count($pedidos_proximos) ?>
                             </span>
                         <?php endif; ?>
                     </button>
@@ -151,7 +129,7 @@ $version = time();
                 </div>
                 <?php endif; ?>
 
-                <?php if (count($agendamentos_proximos) > 0): ?>
+                <?php if (count($pedidos_proximos) > 0): ?>
                 <section class="glass p-6 border border-orange-200">
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <div class="flex items-center gap-4">
@@ -159,9 +137,9 @@ $version = time();
                                 <i class="fas fa-exclamation-triangle"></i>
                             </span>
                             <div>
-                                <h3 class="text-lg font-semibold text-slate-900">Procedimentos nas próximas 2 horas</h3>
+                                <h3 class="text-lg font-semibold text-slate-900">Pedidos recentes (últimas 2 horas)</h3>
                                 <p class="text-sm text-slate-500">
-                                    Você tem <strong><?= count($agendamentos_proximos) ?></strong> procedimento(s) começando em breve.
+                                    Você tem <strong><?= count($pedidos_proximos) ?></strong> pedido(s) recebido(s) recentemente.
                                 </p>
                             </div>
                         </div>
@@ -177,20 +155,20 @@ $version = time();
                     <div class="metric-card">
                         <div class="metric-card__header">
                             <span class="metric-card__icon">
-                                <i class="fas fa-calendar-alt"></i>
+                                <i class="fas fa-file-medical"></i>
                             </span>
-                            <p class="metric-card__value"><?= $total_agendamentos ?></p>
+                            <p class="metric-card__value"><?= $total_pedidos ?></p>
                         </div>
-                        <p class="metric-card__label">Agendamentos totais</p>
+                        <p class="metric-card__label">Pedidos totais</p>
                     </div>
                     <div class="metric-card">
                         <div class="metric-card__header">
                             <span class="metric-card__icon" style="background: rgba(16, 185, 129, 0.18); color: #10b981;">
                                 <i class="fas fa-calendar-day"></i>
                             </span>
-                            <p class="metric-card__value"><?= count($agendamentos_hoje) ?></p>
+                            <p class="metric-card__value"><?= count($pedidos_hoje) ?></p>
                         </div>
-                        <p class="metric-card__label">Para hoje</p>
+                        <p class="metric-card__label">Recebidos hoje</p>
                     </div>
                     <div class="metric-card">
                         <div class="metric-card__header">
@@ -199,16 +177,16 @@ $version = time();
                             </span>
                             <p class="metric-card__value"><?= count($proximos_7_dias) ?></p>
                         </div>
-                        <p class="metric-card__label">Próximos 7 dias</p>
+                        <p class="metric-card__label">Últimos 7 dias</p>
                     </div>
                     <div class="metric-card">
                         <div class="metric-card__header">
                             <span class="metric-card__icon" style="background: rgba(249, 115, 22, 0.18); color: #f97316;">
                                 <i class="fas fa-bolt"></i>
                             </span>
-                            <p class="metric-card__value"><?= count($agendamentos_proximos) ?></p>
+                            <p class="metric-card__value"><?= count($pedidos_proximos) ?></p>
                         </div>
-                        <p class="metric-card__label">Próximas 2 horas</p>
+                        <p class="metric-card__label">Últimas 2 horas</p>
                     </div>
                 </section>
 
@@ -226,7 +204,7 @@ $version = time();
                                 </span>
                                 <div>
                                     <p class="text-sm font-semibold text-slate-900">Todos</p>
-                                    <p class="text-xs text-slate-500"><?= $total_agendamentos ?> agendamentos</p>
+                                    <p class="text-xs text-slate-500"><?= $total_pedidos ?> pedidos</p>
                                 </div>
                             </div>
                         </a>
@@ -263,7 +241,7 @@ $version = time();
                                 </span>
                                 <div>
                                     <p class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($situacao['nome']) ?></p>
-                                    <p class="text-xs text-slate-500"><?= $count ?> agend.</p>
+                                    <p class="text-xs text-slate-500"><?= $count ?> pedidos</p>
                                 </div>
                             </div>
                         </a>
@@ -352,35 +330,35 @@ $version = time();
                     <table class="min-w-full">
                         <thead class="datatable__head">
                             <tr>
-                                <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Data / hora</th>
+                                <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Recebido</th>
                                 <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Paciente</th>
                                 <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Procedimento</th>
-                                <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Hospital</th>
+                                <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Fornecedor</th>
                                 <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Situação</th>
                                 <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Ações</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
-                            <?php foreach ($agendamentos as $ag): ?>
+                            <?php foreach ($pedidos as $ped): ?>
                             <tr class="table-row">
                                 <td class="px-5 py-4">
-                                    <p class="font-semibold text-slate-900"><?= date('d/m/Y', strtotime($ag['data_cirurgia'])) ?></p>
-                                    <p class="text-sm text-slate-500"><?= date('H:i', strtotime($ag['hora_cirurgia'])) ?></p>
+                                    <p class="font-semibold text-slate-900"><?= $ped['data_recebimento'] ? date('d/m/Y', strtotime($ped['data_recebimento'])) : '-' ?></p>
+                                    <p class="text-sm text-slate-500"><?= date('H:i', strtotime($ped['created_at'])) ?></p>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <p class="font-semibold text-slate-900"><?= htmlspecialchars($ag['nome_paciente']) ?></p>
-                                    <p class="text-xs text-slate-500"><?= htmlspecialchars($ag['convenio']) ?></p>
+                                    <p class="font-semibold text-slate-900"><?= htmlspecialchars($ped['nome_paciente']) ?></p>
+                                    <p class="text-xs text-slate-500"><?= htmlspecialchars($ped['convenio']) ?></p>
                                 </td>
-                                <td class="px-5 py-4 text-sm text-slate-600"><?= htmlspecialchars($ag['procedimento_nome']) ?></td>
-                                <td class="px-5 py-4 text-sm text-slate-600"><?= htmlspecialchars($ag['hospital']) ?></td>
+                                <td class="px-5 py-4 text-sm text-slate-600"><?= htmlspecialchars($ped['procedimento'] ?: '-') ?></td>
+                                <td class="px-5 py-4 text-sm text-slate-600"><?= htmlspecialchars($ped['fornecedor'] ?: '-') ?></td>
                                 <td class="px-5 py-4">
-                                    <span class="chip chip--accent" style="background: <?= $ag['situacao_cor'] ?>22; color: <?= $ag['situacao_cor'] ?>;">
-                                        <?= htmlspecialchars($ag['situacao_nome']) ?>
+                                    <span class="chip chip--accent" style="background: <?= $ped['situacao_cor'] ?>22; color: <?= $ped['situacao_cor'] ?>;">
+                                        <?= htmlspecialchars($ped['situacao_nome']) ?>
                                     </span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <button type="button" onclick="viewDetails(<?= $ag['id'] ?>)" class="btn-muted btn-primary--icon">
-                                        <i class="fas fa-eye text-xs"></i>
+                                    <button type="button" onclick="verHistorico(<?= $ped['id'] ?>)" class="btn-muted btn-primary--icon" title="Ver Histórico">
+                                        <i class="fas fa-history text-xs text-orange-500"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -392,10 +370,11 @@ $version = time();
                 <section id="timelineView" class="space-y-4">
                     <?php
                     $grouped = [];
-                    foreach ($agendamentos as $ag) {
-                        $grouped[$ag['data_cirurgia']][] = $ag;
+                    foreach ($pedidos as $ped) {
+                        $data_grupo = $ped['data_recebimento'] ?: date('Y-m-d', strtotime($ped['created_at']));
+                        $grouped[$data_grupo][] = $ped;
                     }
-                    ksort($grouped);
+                    krsort($grouped); // Ordem decrescente (mais recente primeiro)
                     foreach ($grouped as $data => $items):
                     ?>
                     <article class="glass p-6">
@@ -405,23 +384,28 @@ $version = time();
                             </span>
                             <div class="flex-1">
                                 <h3 class="text-base font-semibold text-slate-900"><?= date('d/m/Y', strtotime($data)) ?></h3>
-                                <p class="text-xs text-slate-500"><?= date('l', strtotime($data)) ?></p>
+                                <p class="text-xs text-slate-500"><?= strftime('%A', strtotime($data)) ?></p>
                             </div>
-                            <span class="chip chip--accent"><?= count($items) ?> agend.</span>
+                            <span class="chip chip--accent"><?= count($items) ?> pedidos</span>
                         </div>
                         <div class="space-y-3">
-                            <?php foreach ($items as $ag): ?>
-                            <button type="button" onclick="viewDetails(<?= $ag['id'] ?>)" class="w-full text-left glass p-4 hover:shadow-lg transition-all">
+                            <?php foreach ($items as $ped): ?>
+                            <button type="button" onclick="verHistorico(<?= $ped['id'] ?>)" class="w-full text-left glass p-4 hover:shadow-lg transition-all">
                                 <div class="flex flex-wrap items-center gap-4">
-                                    <span class="chip chip--accent">
-                                        <?= date('H:i', strtotime($ag['hora_cirurgia'])) ?>
+                                    <span class="chip chip--accent bg-indigo-100 text-indigo-700">
+                                        <i class="fas fa-file-medical"></i>
                                     </span>
                                     <div class="flex-1">
-                                        <p class="font-semibold text-slate-900"><?= htmlspecialchars($ag['nome_paciente']) ?></p>
-                                        <p class="text-xs text-slate-500"><?= htmlspecialchars($ag['procedimento_nome']) ?> • <?= htmlspecialchars($ag['hospital']) ?></p>
+                                        <p class="font-semibold text-slate-900"><?= htmlspecialchars($ped['nome_paciente']) ?></p>
+                                        <p class="text-xs text-slate-500">
+                                            <?= htmlspecialchars($ped['procedimento'] ?: 'Sem procedimento') ?>
+                                            <?php if ($ped['fornecedor']): ?>
+                                                • <?= htmlspecialchars($ped['fornecedor']) ?>
+                                            <?php endif; ?>
+                                        </p>
                                     </div>
-                                    <span class="chip chip--accent" style="background: <?= $ag['situacao_cor'] ?>22; color: <?= $ag['situacao_cor'] ?>;">
-                                        <?= htmlspecialchars($ag['situacao_nome']) ?>
+                                    <span class="chip chip--accent" style="background: <?= $ped['situacao_cor'] ?>22; color: <?= $ped['situacao_cor'] ?>;">
+                                        <?= htmlspecialchars($ped['situacao_nome']) ?>
                                     </span>
                                 </div>
                             </button>
@@ -434,14 +418,31 @@ $version = time();
         </div>
     </div>
 
-    <div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="glass rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div class="p-6" id="modalContent"></div>
+    <!-- Modal de Histórico -->
+    <div id="modalHistorico" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="glass rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-history text-orange-500"></i>
+                        Histórico de Status
+                    </h2>
+                    <button onclick="fecharModalHistorico()" class="btn-muted">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="historicoContent" class="space-y-4">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-4xl text-slate-400"></i>
+                        <p class="text-slate-500 mt-3">Carregando histórico...</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        const proximos = <?= json_encode(array_values($agendamentos_proximos)) ?>;
+        const proximos = <?= json_encode(array_values($pedidos_proximos)) ?>;
 
         const listView = document.getElementById('listView');
         const timelineView = document.getElementById('timelineView');
@@ -473,19 +474,18 @@ $version = time();
         function viewUpcoming() {
             if (!proximos.length) return;
             const first = proximos[0];
-            viewDetails(first.id);
+            verHistorico(first.id);
         }
 
         notificationBtn?.addEventListener('click', () => {
             if (!proximos.length) {
-                renderNotification('Sem alertas', 'Você não possui procedimentos iminentes.', 'fa-circle-check', 'emerald');
+                renderNotification('Sem alertas', 'Você não possui pedidos recentes.', 'fa-circle-check', 'emerald');
             } else {
-                proximos.forEach(ag => {
-                    const horario = `${ag.hora_cirurgia.substring(0,5)}`;
+                proximos.forEach(ped => {
                     renderNotification(
-                        `${ag.nome_paciente}`,
-                        `${ag.procedimento_nome} • ${horario}`,
-                        'fa-clock',
+                        `${ped.nome_paciente}`,
+                        `${ped.procedimento || 'Sem procedimento'} • ${ped.convenio}`,
+                        'fa-file-medical',
                         'orange'
                     );
                 });
@@ -513,44 +513,76 @@ $version = time();
             setTimeout(() => wrapper.remove(), 6000);
         }
 
-        function viewDetails(id) {
-            if (!detailsModal || !modalContent) return;
-            modalContent.innerHTML = '<div class="p-6 text-center text-sm text-slate-500">Carregando...</div>';
-            detailsModal.classList.remove('hidden');
+        // Modal de Histórico
+        async function verHistorico(pedidoId) {
+            document.getElementById('modalHistorico').classList.remove('hidden');
 
-            fetch('view-agendamento.php?id=' + id)
-                .then(response => {
-                    if (!response.ok) throw new Error('Erro ao carregar detalhes');
-                    return response.text();
-                })
-                .then(html => {
-                    modalContent.innerHTML = html;
-                })
-                .catch(() => {
-                    modalContent.innerHTML = '<div class="p-6 text-center text-sm text-red-500">Não foi possível carregar os detalhes.</div>';
-                });
+            try {
+                const response = await fetch(`../admin/pedidos-novos.php?action=get_historico&id=${pedidoId}`);
+                const data = await response.json();
+
+                const content = document.getElementById('historicoContent');
+
+                if (data.success && data.historico.length > 0) {
+                    content.innerHTML = `
+                        <div class="relative border-l-2 border-slate-200 pl-6 space-y-6">
+                            ${data.historico.map((h, index) => `
+                                <div class="relative">
+                                    <div class="absolute -left-[27px] w-8 h-8 rounded-full flex items-center justify-center" style="background: ${h.situacao_cor}22;">
+                                        <div class="w-4 h-4 rounded-full" style="background: ${h.situacao_cor};"></div>
+                                    </div>
+                                    <div class="glass p-4 rounded-lg">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <span class="px-3 py-1 text-xs font-semibold rounded-full" style="background: ${h.situacao_cor}22; color: ${h.situacao_cor};">
+                                                ${h.situacao_nome}
+                                            </span>
+                                            <span class="text-xs text-slate-500">${new Date(h.created_at).toLocaleString('pt-BR')}</span>
+                                        </div>
+                                        <p class="text-sm text-slate-600 mt-2">
+                                            <i class="fas fa-user text-slate-400 mr-1"></i>
+                                            ${h.usuario_nome}
+                                        </p>
+                                        ${h.observacao ? `<p class="text-sm text-slate-700 mt-2 italic">"${h.observacao}"</p>` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-inbox text-4xl text-slate-300 mb-3"></i>
+                            <p class="text-slate-500">Nenhum histórico encontrado</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('historicoContent').innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                        <p class="text-red-600">Erro ao carregar histórico</p>
+                    </div>
+                `;
+            }
         }
 
-        function closeModal() {
-            if (!detailsModal || !modalContent) return;
-            detailsModal.classList.add('hidden');
-            modalContent.innerHTML = '';
+        function fecharModalHistorico() {
+            document.getElementById('modalHistorico').classList.add('hidden');
         }
 
-        detailsModal?.addEventListener('click', event => {
-            if (event.target === detailsModal) {
-                closeModal();
+        // Fechar modal ao clicar fora
+        document.getElementById('modalHistorico')?.addEventListener('click', (e) => {
+            if (e.target.id === 'modalHistorico') fecharModalHistorico();
+        });
+
+        // Fechar modal com ESC
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                fecharModalHistorico();
             }
         });
 
-        window.addEventListener('keydown', event => {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
-        });
-
-        window.closeModal = closeModal;
-        window.viewDetails = viewDetails;
+        window.verHistorico = verHistorico;
     </script>
 </body>
 </html>
